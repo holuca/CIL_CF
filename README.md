@@ -1,2 +1,3 @@
-# CIL_CF
+# CIL Collaborative Filtering Project
+
 CIL_CollaborativeFiltering
