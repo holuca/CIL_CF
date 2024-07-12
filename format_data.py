@@ -57,6 +57,36 @@ def save_matrix_to_csv(matrix, output_csv):
     matrix_df = pd.DataFrame(matrix)
     matrix_df.to_csv(output_csv, index=False, header=False)
 
+
+def parsef(line):
+    """ parses line and returns parsed row, column and value """
+    l1 = line.decode('utf-8').split(',')
+    l2 = l1[0].split('_')
+    row = int(l2[0][1:])
+    column = int(l2[1][1:])
+    value = float(l1[1])
+    return row, column, value
+
+
+def loadRawData(file='../input_data/data_train.csv'):
+    """ Loads and returns data in surprise format """
+    itemID = []
+    userID = []
+    rating = []
+
+    # parse data file into three arrays
+    with open(file, 'rb') as f:
+        content = f.readlines()
+        content = content[1:]
+        for line in content:
+            if line:
+                row, column, value = parsef(line)
+                itemID.append(column)
+                userID.append(row)
+                rating.append(value)
+    return itemID, userID, rating
+
+
 def main(input_csv, output_csv, format):
     matrix = convert_csv_to_matrix(input_csv, format)
     
@@ -71,6 +101,7 @@ def main(input_csv, output_csv, format):
         # Normalize and scale the matrix
         matrix = normalize_matrix(matrix)
         matrix = scale_matrix(matrix)
+    
     else:
         print(f"Unknown action: {format}")
         sys.exit(1)
@@ -78,11 +109,12 @@ def main(input_csv, output_csv, format):
     # Save the matrix to the output CSV
     save_matrix_to_csv(matrix, output_csv)
 
-if __name__ == "_main_":
+
+
+if __name__ == "__main__":
     if len(sys.argv) < 3:
         print("<outputfile> should be string (.csv if needed), <format> should be 'zero', 'mean', 'normalize' or 'scale'")
         sys.exit(1)
-    
     input_csv = './input_data/data_train.csv'
     output_csv = sys.argv[1]
     format = sys.argv[2]
