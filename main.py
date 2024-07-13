@@ -12,7 +12,6 @@ from svdpp import *
 
 
 def read_data(data_dir):
-    names = ['user_id', 'item_id', 'rating']
     data = pd.read_csv(os.path.join(data_dir))
     num_users = data.user_id.unique().shape[0]
     num_items = data.item_id.unique().shape[0]
@@ -21,7 +20,7 @@ def read_data(data_dir):
     return data, num_users, num_items
 
 
-def split_data(data, num_users, num_items, test_ratio=0.0):
+def split_data(data, num_users, num_items, test_ratio=0.01):
     mask = [True if x == 1 else False for x in np.random.uniform(0, 1, (len(data))) < 1 - test_ratio]
     neg_mask = [not x for x in mask]
     train_data, test_data = data[mask], data[neg_mask]
@@ -29,7 +28,9 @@ def split_data(data, num_users, num_items, test_ratio=0.0):
 
 
 def load_data(data, num_users, num_items):
-    users, items, scores = [], [], []
+    users = []
+    items = []
+    scores = []
     inter = np.zeros((num_items, num_users))
     for line in data.itertuples():
         user_index, item_index = line[1], line[2]
@@ -45,30 +46,21 @@ def load_data(data, num_users, num_items):
 
 
 
-def split_and_load(test_ratio=0, batch_size=256):
+def split_and_load(test_ratio=0.01, batch_size=256):
     input_csv = './data_train.csv'
-    # read data
-    data, num_users, num_items = read_data(input_csv)
-    # split data
-    train_data, test_data = split_data(
-        data, num_users, num_items, test_ratio)
-    # load data with proper form
-    train_u, train_i, train_r, _, train_u_i_dict = load_data(
-        train_data, num_users, num_items)
-    test_u, test_i, test_r, _, test_u_i_dict = load_data(
-        test_data, num_users, num_items)
-    # Get on TensorDataset
-    train_set = torch.utils.data.TensorDataset(
-        torch.tensor(train_u), torch.tensor(train_i), torch.tensor(train_r))
-    test_set = torch.utils.data.TensorDataset(
-        torch.tensor(test_u), torch.tensor(test_i), torch.tensor(test_r))
-    # Get on DataLoader
-    train_iter = torch.utils.data.DataLoader(
-        train_set, shuffle=True, batch_size=batch_size)
-    #test_iter = torch.utils.data.DataLoader(
-    #    test_set, shuffle=True, batch_size=batch_size)
+    data, n_users, n_items = read_data(input_csv)
+    train_data, test_data = split_data(data, n_users, n_items, test_ratio)
+    
+    train_u, train_i, train_r, _, train_ui_dict = load_data(train_data, n_users, n_items)
+    test_u, test_i, test_r, _, test_ui_dict = load_data(test_data, n_users, n_items)
+
+    train_set = torch.utils.data.TensorDataset(torch.tensor(train_u), torch.tensor(train_i), torch.tensor(train_r))
+    test_set = torch.utils.data.TensorDataset(torch.tensor(test_u), torch.tensor(test_i), torch.tensor(test_r))
+
+    train_loader = torch.utils.data.DataLoader(train_set, shuffle=True, batch_size=batch_size)
+    test_loader = torch.utils.data.DataLoader(test_set, shuffle=True, batch_size=batch_size)
     #return num_users, num_items, train_iter, test_iter, train_u_i_dict, test_u_i_dict
-    return num_users, num_items, train_iter, train_iter, train_u_i_dict, test_u_i_dict
+    return n_users, n_items, train_loader, test_loader, train_ui_dict, test_ui_dict
 
 def try_gpu(i=0):
     return f'cuda:{i}' if torch.cuda.device_count() >= i + 1 else 'cpu'
@@ -97,13 +89,19 @@ def predict_ratings(model, user_ids, item_ids, user_item_dict, device):
         ratings = model(user_ids, item_ids, user_item_dict)
     return ratings.cpu().numpy()
 
-
+def adjust_prediction(prediction):
+    if prediction < 1:
+        return 1
+    elif prediction > 5:
+        return 5
+    else:
+        return prediction
 
 def main(input_csv, mode):
   if(mode == "train"):
     data, num_rows, num_cols = read_data(input_csv)
   
-    num_users, num_items, train_iter, valid_iter, train_u_i_dict, valid_u_i_dict = split_and_load(test_ratio=0, batch_size=256)
+    num_users, num_items, train_iter, valid_iter, train_u_i_dict, valid_u_i_dict = split_and_load(test_ratio=0.01, batch_size=256)
 
     config_space = {
     "num_factors": [100],
@@ -114,7 +112,7 @@ def main(input_csv, mode):
     "wd": [0.0001],
     "lr": [0.001],
     "optimizer": ["Adam"],
-    "num_epochs": [150]
+    "num_epochs": [75]
     }
 
     # Data loaders (replace with actual data loaders)
@@ -130,7 +128,7 @@ def main(input_csv, mode):
     for _ in range(num_samples):
         config = sample_config(config_space)
         print(f"Training with config: {config}")
-        val_rmse = trainable_fn(config, train_loader, valid_loader, train_u_i_dict, valid_u_i_dict, device, os.path.abspath("./checkpoints"))
+        val_rmse = trainable_function(config, train_loader, valid_loader, train_u_i_dict, valid_u_i_dict, device, os.path.abspath("./checkpoints"))
         if val_rmse < best_val_rmse:
             best_val_rmse = val_rmse
             best_config = config
@@ -175,13 +173,15 @@ def main(input_csv, mode):
 
     # Create a new DataFrame with Id and Prediction columns
     formatted_df = predictions_df[['Id', 'prediction']].rename(columns={'prediction': 'Prediction'})
+    #all nums inbetween 1 and 5
+    formatted_df['Prediction'] = formatted_df['Prediction'].apply(adjust_prediction)
 
-    # Save the new DataFrame to a CSV file
-    formatted_df.to_csv('formatted_predictions.csv', index=False)
+    # Save the adjusted DataFrame to a new CSV file
+    formatted_df.to_csv('results7.csv', index=False, float_format='%.7f')
 
 if __name__ == "__main__":
-    #input_csv = './data_train.csv'
-    input_csv = './data_sampleSubmission.csv'
-    main(input_csv, "test")
+    input_csv = './data_train.csv'
+    #input_csv = './data_sampleSubmission.csv'
+    main(input_csv, "train")
 
     
