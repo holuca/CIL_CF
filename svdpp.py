@@ -77,14 +77,14 @@ def trainable_function(config, train_loader=None, valid_loader=None, train_u_i_d
             r_hat = model(u, i, valid_u_i_dict)
             with torch.no_grad():
                 val_rmse += np.sqrt(loss_fn(r_hat, r).cpu().numpy())
-        path = os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch}.pth")
-        torch.save((model.state_dict(), optimizer.state_dict()), path)
-        # Save Checkpoint -> uncomment if looking at more than one combination
-        #if val_rmse < best_val_rmse:
-        #    best_val_rmse = val_rmse
-        #    if checkpoint_dir:
-        #        path = os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch}.pth")
-        #        torch.save((model.state_dict(), optimizer.state_dict()), path)
+        #path = os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch}.pth")
+        #torch.save((model.state_dict(), optimizer.state_dict()), path)
+        #Save Checkpoint -> uncomment if looking at more than one combination
+        if val_rmse < best_val_rmse:
+            best_val_rmse = val_rmse
+            if checkpoint_dir:
+                path = os.path.join(checkpoint_dir, f"checkpoint_epoch_{epoch}.pth")
+                torch.save((model.state_dict(), optimizer.state_dict()), path)
         print(f"Epoch {epoch+1}/{config['num_epochs']}, Train RMSE: {tr_rmse / len(train_loader)}, Valid RMSE: {val_rmse / len(valid_loader)}")
 
     return best_val_rmse

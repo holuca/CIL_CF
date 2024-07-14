@@ -8,7 +8,8 @@ from torch import nn
 from itertools import product
 from functools import partial
 import random
-from svdpp import *
+#from svdpp import *
+from neuralCF import *
 
 
 def read_data(data_dir):
@@ -20,7 +21,7 @@ def read_data(data_dir):
     return data, num_users, num_items
 
 
-def split_data(data, num_users, num_items, test_ratio=0.01):
+def split_data(data, num_users, num_items, test_ratio=0.1):
     mask = [True if x == 1 else False for x in np.random.uniform(0, 1, (len(data))) < 1 - test_ratio]
     neg_mask = [not x for x in mask]
     train_data, test_data = data[mask], data[neg_mask]
@@ -46,7 +47,7 @@ def load_data(data, num_users, num_items):
 
 
 
-def split_and_load(test_ratio=0.01, batch_size=256):
+def split_and_load(test_ratio=0.1, batch_size=256):
     input_csv = './data_train.csv'
     data, n_users, n_items = read_data(input_csv)
     train_data, test_data = split_data(data, n_users, n_items, test_ratio)
@@ -81,12 +82,12 @@ def load_best_model(checkpoint_dir, config, device):
     return model
 
 
-def predict_ratings(model, user_ids, item_ids, user_item_dict, device):
+def predict_ratings(model, user_ids, item_ids, device):
     model.eval()
     user_ids = torch.tensor(user_ids).to(device)
     item_ids = torch.tensor(item_ids).to(device)
     with torch.no_grad():
-        ratings = model(user_ids, item_ids, user_item_dict)
+        ratings = model(user_ids, item_ids)
     return ratings.cpu().numpy()
 
 def adjust_prediction(prediction):
@@ -101,18 +102,19 @@ def main(input_csv, mode):
   if(mode == "train"):
     data, num_rows, num_cols = read_data(input_csv)
   
-    num_users, num_items, train_iter, valid_iter, train_u_i_dict, valid_u_i_dict = split_and_load(test_ratio=0.01, batch_size=256)
+    num_users, num_items, train_iter, valid_iter, train_u_i_dict, valid_u_i_dict = split_and_load(test_ratio=0.1, batch_size=256)
 
     config_space = {
-    "num_factors": [100],
+    "num_factors": [50, 100, 150, 200],
+    "num_hiddens": [10, 50, 100, 200],
     "num_users": num_users,
     "num_items": num_items,
     #"wd": [1e-6, 1e-5, 1e-4],
     #"lr": [1e-4, 1e-3, 1e-2],
-    "wd": [0.0001],
-    "lr": [0.001],
+    "wd": [1e-3],
+    "lr": [1e-4],
     "optimizer": ["Adam"],
-    "num_epochs": [75]
+    "num_epochs": [30]
     }
 
     # Data loaders (replace with actual data loaders)
@@ -157,10 +159,11 @@ def main(input_csv, mode):
 
 
     best_checkpoint_dir = "./best_checkpoint"
-    best_config = {'num_factors': 100, 'num_users': 10000, 'num_items': 1000, 'wd': 0.0001, 'lr': 0.001, 'optimizer': 'Adam', 'num_epochs': 150}
+    best_config = {'num_factors': 50, 'num_hiddens': 100, 'num_users': 10000, 'num_items': 1000, 'wd': 0.001, 'lr': 0.0001, 'optimizer': 'Adam', 'num_epochs': 30}
+    #also try: {'num_factors': 50, 'num_hiddens': 50, 'num_users': 10000, 'num_items': 1000, 'wd': 1e-06, 'lr': 0.0001, 'optimizer': 'Adam', 'num_epochs': 30}
     best_model = load_best_model(best_checkpoint_dir, best_config, device=None)
     # Predict ratings for missing pairs
-    predicted_ratings = predict_ratings(best_model, user_ids, item_ids, u_i_dict, device=None)
+    predicted_ratings = predict_ratings(best_model, user_ids, item_ids, device=None)
 
     # Combine user-item pairs with predicted ratings
     predictions = list(zip(user_ids, item_ids, predicted_ratings))
@@ -177,7 +180,7 @@ def main(input_csv, mode):
     formatted_df['Prediction'] = formatted_df['Prediction'].apply(adjust_prediction)
 
     # Save the adjusted DataFrame to a new CSV file
-    formatted_df.to_csv('results7.csv', index=False, float_format='%.7f')
+    formatted_df.to_csv('results_nerualCF4.csv', index=False, float_format='%.7f')
 
 if __name__ == "__main__":
     input_csv = './data_train.csv'
