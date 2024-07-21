@@ -17,6 +17,29 @@ class NeuCF(nn.Module):
             nn.Linear(num_hiddens, num_hiddens, bias=True),
             nn.GELU(),
             nn.Linear(num_hiddens, num_hiddens, bias=True),
+
+            nn.ReLU(),
+            nn.Linear(num_hiddens, 2 * num_hiddens, bias=True),
+
+            nn.ReLU(),
+            nn.Linear(2 * num_hiddens, 2 * num_hiddens, bias=True),
+
+            nn.ReLU(),
+            nn.Linear(2 * num_hiddens, 4 * num_hiddens, bias=True),
+            nn.ReLU(),
+            nn.Linear(4 * num_hiddens, 4 * num_hiddens, bias=True),
+            nn.ReLU(),
+            nn.Linear(4 * num_hiddens, 8 * num_hiddens, bias=True),
+            nn.ReLU(),
+            nn.Linear(8 * num_hiddens, 4 * num_hiddens, bias=True),
+            nn.ReLU(),
+            nn.Linear(4 * num_hiddens, 4 * num_hiddens, bias=True),
+            nn.ReLU(),
+            nn.Linear(4 * num_hiddens, 2 * num_hiddens, bias=True),
+
+            nn.ReLU(),
+            nn.Linear(2 * num_hiddens, num_hiddens, bias=True),
+
             nn.ReLU(),
             nn.Linear(num_hiddens, num_hiddens, bias=True)
         )
@@ -44,16 +67,10 @@ def get_net(config, device=None):
   model = model.to(device)
   return model  
 
-#could still do: (psuedocode)
-# BPR loss function(integrating pairwise ranking loss) better model user preferences over pairs of items than individual item scores
-#->give negative if user has not interacted with item
-#BPR loss for (u,i,r): L_BPR=-SUM(log(sigma(yhat_ui - yhat_ur))) yhat ui and yhat uj are predicted scores for the postiive and negative items respecively (sum over all training triplest)
-def bpr_loss(model, user_indices, pos_item_indices, neg_item_indices):
-    pos_scores = model(user_indices, pos_item_indices).squeeze()
-    neg_scores = model(user_indices, neg_item_indices).squeeze()
-    loss = -torch.mean(torch.log(torch.sigmoid(pos_scores - neg_scores)))
-    return loss
 
+
+#could still do: (psuedocode)
+# BPR loss function(integrating pairwise ranking loss) better model user preferences over pairs of items than individual item scor
 # Function to add adversarial noise to embeddings to improve generalization
 def add_adversarial_noise(model, user_indices, item_indices, ratings, epsilon=0.01):
     loss_fn = nn.MSELoss(reduction='mean')

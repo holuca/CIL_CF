@@ -105,16 +105,16 @@ def main(input_csv, mode):
     num_users, num_items, train_iter, valid_iter, train_u_i_dict, valid_u_i_dict = split_and_load(test_ratio=0.1, batch_size=256)
 
     config_space = {
-    "num_factors": [50, 100, 150, 200],
-    "num_hiddens": [10, 50, 100, 200],
+    "num_factors": [100],
+    "num_hiddens": [50],
     "num_users": num_users,
     "num_items": num_items,
     #"wd": [1e-6, 1e-5, 1e-4],
     #"lr": [1e-4, 1e-3, 1e-2],
-    "wd": [1e-3],
-    "lr": [1e-4],
+    "wd": [0.00001],
+    "lr": [0.0001],
     "optimizer": ["Adam"],
-    "num_epochs": [30]
+    "num_epochs": [40]
     }
 
     # Data loaders (replace with actual data loaders)
@@ -159,8 +159,9 @@ def main(input_csv, mode):
 
 
     best_checkpoint_dir = "./best_checkpoint"
-    best_config = {'num_factors': 50, 'num_hiddens': 100, 'num_users': 10000, 'num_items': 1000, 'wd': 0.001, 'lr': 0.0001, 'optimizer': 'Adam', 'num_epochs': 30}
-    #also try: {'num_factors': 50, 'num_hiddens': 50, 'num_users': 10000, 'num_items': 1000, 'wd': 1e-06, 'lr': 0.0001, 'optimizer': 'Adam', 'num_epochs': 30}
+    best_config = {'num_factors': 100, 'num_hiddens': 50, 'num_users': 10000, 'num_items': 1000, 'wd': 0.0001, 'lr': 0.001, 'optimizer': 'Adam', 'num_epochs': 40}
+    #100, 50
+    #100, 100
     best_model = load_best_model(best_checkpoint_dir, best_config, device=None)
     # Predict ratings for missing pairs
     predicted_ratings = predict_ratings(best_model, user_ids, item_ids, device=None)
@@ -180,11 +181,12 @@ def main(input_csv, mode):
     formatted_df['Prediction'] = formatted_df['Prediction'].apply(adjust_prediction)
 
     # Save the adjusted DataFrame to a new CSV file
-    formatted_df.to_csv('results_nerualCF4.csv', index=False, float_format='%.7f')
+    formatted_df.to_csv('results_DeeperNCFOverfitt.csv', index=False, float_format='%.7f')
 
 if __name__ == "__main__":
     input_csv = './data_train.csv'
     #input_csv = './data_sampleSubmission.csv'
     main(input_csv, "train")
+
 
     
