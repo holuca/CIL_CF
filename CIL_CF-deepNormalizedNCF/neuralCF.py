@@ -146,13 +146,13 @@ def trainable_function(config, train_loader=None, valid_loader=None, train_u_i_d
             optimizer.zero_grad()
 
             # Adversarial training
-            #perturbed_user_embeddings, perturbed_item_embeddings = add_adversarial_noise(
-            #    model, u, i, r, epsilon=0.01
-            #)
+            perturbed_user_embeddings, perturbed_item_embeddings = add_adversarial_noise(
+                model, u, i, r, epsilon=0.01
+            )
 
             # replacing the original embeddings with perturbed ones for this batch
-            #model.P.weight.data[u] = perturbed_user_embeddings
-            #model.Q.weight.data[i] = perturbed_item_embeddings
+            model.P.weight.data[u] = perturbed_user_embeddings
+            model.Q.weight.data[i] = perturbed_item_embeddings
 
             #output = model(perturbed_user_embeddings, perturbed_item_embeddings)
             #no ui dictiannlry in model now
