@@ -1,3 +1,6 @@
 
 .DS_Store
 .DS_Store
+/.idea
+SVD/result.csv
+ALS/result.csv
