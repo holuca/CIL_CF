@@ -184,6 +184,6 @@ def main(input_csv, mode):
     formatted_df.to_csv('results_current.csv', index=False, float_format='%.7f')
 
 if __name__ == "__main__":
-    #input_csv = './data_train.csv'
-    input_csv = './data_sampleSubmission.csv'
-    main(input_csv, "test")
+    input_csv = './data_train.csv'
+    #input_csv = './data_sampleSubmission.csv'
+    main(input_csv, "train")
